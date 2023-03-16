@@ -32,7 +32,7 @@ if [[ $# -eq 1 ]]; then
   }
   case "$1" in
     branches)
-      echo $'CTRL-O (open in browser) ╱ ALT-A (show all branches)\n'
+      echo $'CTRL-O (open in browser) ╱ ALT-A (show all branches) / CTRL-L (open log)\n'
       branches
       ;;
     all-branches)
@@ -155,6 +155,7 @@ _fzf_git_branches() {
     --no-hscroll \
     --bind 'ctrl-/:change-preview-window(down,70%|hidden|)' \
     --bind "ctrl-o:execute-silent:bash $__fzf_git branch {}" \
+    --bind 'ctrl-l:execute: sed s/^..// <<< {} | cut -d" " -f1 | xargs git log --color=always> /dev/tty' \
     --bind "alt-a:change-prompt(🌳 All branches> )+reload:bash \"$__fzf_git\" all-branches" \
     --preview 'git log --oneline --graph --date=short --color=always --pretty="format:%C(auto)%cd %h%d %s" $(sed s/^..// <<< {} | cut -d" " -f1)' "$@" |
   sed 's/^..//' | cut -d' ' -f1
