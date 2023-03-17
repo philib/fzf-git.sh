@@ -180,14 +180,20 @@ _fzf_git_tags() {
 
 _fzf_git_hashes() {
   _fzf_git_check || return
-  git log --date=short --format="%C(green)%C(bold)%cd %C(auto)%h%d %s (%an)" --graph --color=always |
+
+  GIT_COMMAND="git log $@ --pretty='%C(bold magenta)%h %Creset%C(italic cyan)%an %Creset%C(white)%s' --color=always"
+  GIT_COMMAND_MERGES="$GIT_COMMAND --merges"
+  eval $GIT_COMMAND |
   _fzf_git_fzf --ansi --no-sort --bind 'ctrl-s:toggle-sort' \
     --prompt '🍡 Hashes> ' \
-    --header $'CTRL-O (open in browser) ╱ CTRL-D (diff) ╱ CTRL-S (toggle sort)\n\n' \
+    --header $'CTRL-O (open in browser) ╱ CTRL-D (diff) ╱ CTRL-C (copy hash) /\n\nCTRL-X (show merges only) / CTRL-H (show all commits)\n\n' \
     --bind "ctrl-o:execute-silent:bash $__fzf_git commit {}" \
-    --bind 'ctrl-d:execute:grep -o "[a-f0-9]\{7,\}" <<< {} | head -n 1 | xargs git diff > /dev/tty' \
+    --bind 'ctrl-d:execute:grep -o "[a-f0-9]\{7,\}" <<< {} | head -n 1 | xargs -I{} git diff {}~..{} --color=always> /dev/tty' \
+    --bind 'ctrl-c:execute-silent:(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n 1 | xargs git rev-parse | xsel -b)' \
+    --bind "ctrl-x:reload:$GIT_COMMAND_MERGES" \
+    --bind "ctrl-h:reload:$GIT_COMMAND" \
     --color hl:underline,hl+:underline \
-    --preview 'grep -o "[a-f0-9]\{7,\}" <<< {} | head -n 1 | xargs git show --color=always' "$@" |
+    --preview 'grep -o "[a-f0-9]\{7,\}" <<< {} | head -n 1 | xargs -n 1 -I % sh -c "git show % | (if grep -q "^Merge:"; then git log %^1..%^2 --color=always; else git diff %^ % --color=always; fi)"' |
   awk 'match($0, /[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*/) { print substr($0, RSTART, RLENGTH) }'
 }
 
