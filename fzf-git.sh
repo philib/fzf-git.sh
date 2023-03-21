@@ -173,8 +173,9 @@ _fzf_git_tags() {
   git tag --sort -version:refname |
   _fzf_git_fzf --preview-window right,70% \
     --prompt '📛 Tags> ' \
-    --header $'CTRL-O (open in browser)\n\n' \
+    --header $'CTRL-O (open in browser) / CTRL-D (diff)\n\n' \
     --bind "ctrl-o:execute-silent:bash $__fzf_git tag {}" \
+    --bind 'ctrl-d:execute:git diff {}~..{} --color=always> /dev/tty' \
     --preview 'git log --color=always {}~..{}' "$@"
 }
 
