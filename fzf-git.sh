@@ -175,7 +175,7 @@ _fzf_git_tags() {
     --prompt '📛 Tags> ' \
     --header $'CTRL-O (open in browser)\n\n' \
     --bind "ctrl-o:execute-silent:bash $__fzf_git tag {}" \
-    --preview 'git show --color=always {}' "$@"
+    --preview 'git log --color=always {}~..{}' "$@"
 }
 
 _fzf_git_hashes() {
