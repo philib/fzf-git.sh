@@ -164,7 +164,7 @@ _fzf_git_branches() {
     --bind 'ctrl-l:execute: sed s/^..// <<< {} | cut -d" " -f1 | xargs git log --color=always> /dev/tty' \
     --bind "ctrl-r:reload:git fetch && bash \"$__fzf_git\" branches" \
     --bind "alt-a:change-prompt(🌳 All branches> )+reload:bash \"$__fzf_git\" all-branches" \
-    --preview 'git log --oneline --graph --date=short --color=always --pretty="format:%C(auto)%cd %h%d %s" $(sed s/^..// <<< {} | cut -d" " -f1)' "$@" |
+    --preview 'echo {} | sed "s/\(^\*\?\s*\)\([\w\/]*\)/\2/" | cut -d " " -f 1 | xargs git log --color=always' |
   sed 's/^..//' | cut -d' ' -f1
 }
 
