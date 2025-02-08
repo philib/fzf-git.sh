@@ -1,3 +1,5 @@
+#/bin/sh
+
 # The MIT License (MIT)
 #
 # Copyright (c) 2022 Junegunn Choi
@@ -102,11 +104,10 @@ if [[ $- =~ i ]]; then
 
 # Redefine this function to change the options
 _fzf_git_fzf() {
-  fzf-tmux -p80%,60% -- \
-    --layout=reverse --multi --height=50% --min-height=20 --border \
-    --color='header:italic:underline' \
-    --preview-window='right,50%,border-left' \
-    --bind='ctrl-/:change-preview-window(down,50%,border-top|hidden|)' "$@"
+  fzf --multi --ansi --reverse --no-sort --height 100% --border \
+	--preview-window='right,50%,border-left' \
+	--color='header:italic:underline' \
+	--bind='ctrl-/:change-preview-window(down,50%,border-top|hidden|)' "$@"
 }
 
 _fzf_git_check() {
@@ -151,6 +152,7 @@ _fzf_git_files() {
 _fzf_git_branches() {
   _fzf_git_check || return
 
+  export -f test
   bash "$__fzf_git" branches |
   _fzf_git_fzf --ansi \
     --prompt '🌲 Branches> ' \
@@ -162,7 +164,8 @@ _fzf_git_branches() {
     --bind 'ctrl-/:change-preview-window(down,70%|hidden|)' \
     --bind "ctrl-o:execute-silent:bash $__fzf_git branch {}" \
     --bind 'ctrl-l:execute: sed s/^..// <<< {} | cut -d" " -f1 | xargs git log --color=always> /dev/tty' \
-    --bind "ctrl-r:reload:git fetch && bash \"$__fzf_git\" branches" \
+    --bind "ctrl-h:execute: bash $__fzf_git __fzf_git_hashes {}" \
+    --bind "ctrl-r:reload:git fetch && git fetch --tags --force && bash \"$__fzf_git\" branches" \
     --bind "alt-a:change-prompt(🌳 All branches> )+reload:bash \"$__fzf_git\" all-branches" \
     --preview 'echo {} | sed "s/\(^\*\?\s*\)\([\w\/]*\)/\2/" | cut -d " " -f 1 | xargs git log --color=always' |
   sed 's/^..//' | cut -d' ' -f1
@@ -170,12 +173,13 @@ _fzf_git_branches() {
 
 _fzf_git_tags() {
   _fzf_git_check || return
-  git tag --sort -version:refname |
+  git tag --sort -creatordate |
   _fzf_git_fzf --preview-window right,70% \
     --prompt '📛 Tags> ' \
-    --header $'CTRL-O (open in browser) / CTRL-D (diff)\n\n' \
+    --header $'CTRL-O (open in browser) / CTRL-D (diff)\n\nCTRL-R (refresh)\n\n' \
     --bind "ctrl-o:execute-silent:bash $__fzf_git tag {}" \
     --bind 'ctrl-d:execute:git diff {}~..{} --color=always> /dev/tty' \
+    --bind "ctrl-r:reload(git fetch --tags --force && git tag --sort -creatordate)" \
     --preview 'git log --color=always {}~..{}' "$@"
 }
 
@@ -187,14 +191,15 @@ _fzf_git_hashes() {
   eval $GIT_COMMAND |
   _fzf_git_fzf --ansi --no-sort --bind 'ctrl-s:toggle-sort' \
     --prompt '🍡 Hashes> ' \
-    --header $'CTRL-O (open in browser) ╱ CTRL-D (diff) ╱ CTRL-C (copy hash) /\n\nCTRL-X (show merges only) / CTRL-H (show all commits)\n\n' \
+    --header $'CTRL-O (open in browser) ╱ CTRL-D (diff) ╱ CTRL-C (copy hash) /\n\nCTRL-R (reload) / CTRL-X (show merges only) / CTRL-H (show all commits)\n\n' \
     --bind "ctrl-o:execute-silent:bash $__fzf_git commit {}" \
     --bind 'ctrl-d:execute:grep -o "[a-f0-9]\{7,\}" <<< {} | head -n 1 | xargs -I{} git diff {}~..{} --color=always> /dev/tty' \
     --bind 'ctrl-c:execute-silent:(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n 1 | xargs git rev-parse | xsel -b)' \
     --bind "ctrl-x:reload:$GIT_COMMAND_MERGES" \
     --bind "ctrl-h:reload:$GIT_COMMAND" \
+    --bind "ctrl-r:reload(git fetch && $GIT_COMMAND)" \
     --color hl:underline,hl+:underline \
-    --preview 'grep -o "[a-f0-9]\{7,\}" <<< {} | head -n 1 | xargs -n 1 -I % sh -c "git show % | (if grep -q "^Merge:"; then git log %^1..%^2 --color=always; else git diff %^ % --color=always; fi)"' |
+    --preview 'echo "$(git describe --exact-match --tags $(grep -o "[a-f0-9]\{7,\}" <<< {}) 2> /dev/null || echo "")\n" && grep -o "[a-f0-9]\{7,\}" <<< {} | head -n 1 | xargs -n 1 -I % sh -c "git show % | (if grep -q "^Merge:"; then git show % --color=always && git log %^1..%^2 --color=always; else git diff %^ % --color=always; fi)"' |
   awk 'match($0, /[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*/) { print substr($0, RSTART, RLENGTH) }'
 }
 
